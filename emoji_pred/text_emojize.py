@@ -33,12 +33,12 @@ EMOJIS = ":joy: :unamused: :weary: :sob: :heart_eyes: \
 :sparkling_heart: :blue_heart: :grimacing: :sparkles:".split(' ')
 
 
-dataset = pd.read_csv('replies3.csv', encoding="utf-8").values.tolist()
+dataset = pd.read_csv('testr.csv', encoding="utf-8").values.tolist()
 num_threads = 10
 parent_tweet = dataset[0][1]
 #print(parent_tweet)
 reply_tweets = []
-reply_tweets = dataset[1:]
+reply_tweets = dataset[0:]
 
 def top_elements(array, k):
     ind = np.argpartition(array, -k)[-k:]
@@ -87,49 +87,50 @@ if __name__ == "__main__":
 
     ### PARALLEL
 
-    startTime = time()
-    processes = []
-    intervals = []
-    for i in range(len(reply_tweets)):
-        # if (i % num_threads == 0):
-        intervals.append(i)
-    print(intervals)
-    with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
-        for (i, emoji_ids) in tqdm(zip(intervals, executor.map(get_emoji, intervals))):
-            pass
-    endTime = time()
-    print("Multi time:", endTime - startTime)
+    # startTime = time()
+    # processes = []
+    # intervals = []
+    # for i in range(len(reply_tweets)):
+    #     # if (i % num_threads == 0):
+    #     intervals.append(i)
+    # print(intervals)
+    # with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
+    #     for (i, emoji_ids) in tqdm(zip(intervals, executor.map(get_emoji, intervals))):
+    #         pass
+    # endTime = time()
+    # print("Multi time:", endTime - startTime)
 
 
      ### SERIAL
     i = 0
     x = time()
-    # for index in tqdm(range(len(reply_tweets))):
-    #     x1 = time()
-    #     text = reply_tweets[index][1]
-    #     maxlen = 200
+    for index in tqdm(range(len(reply_tweets))):
+        x1 = time()
+        print(reply_tweets[index][2])
+        text = reply_tweets[index][2]
+        maxlen = 200
 
-    #     # Tokenizing using dictionary
-    #     with open(VOCAB_PATH, 'r') as f:
-    #         vocabulary = json.load(f)
+        # Tokenizing using dictionary
+        with open(VOCAB_PATH, 'r') as f:
+            vocabulary = json.load(f)
 
-    #     st = SentenceTokenizer(vocabulary, maxlen)
+        st = SentenceTokenizer(vocabulary, maxlen)
 
-    #     # Loading model
-    #     model = torchmoji_emojis(PRETRAINED_PATH)
-    #     # Running predictions
-    #     tokenized, _, _ = st.tokenize_sentences([text])
-    #     # Get sentence probability
-    #     prob = model(tokenized)[0]
+        # Loading model
+        model = torchmoji_emojis(PRETRAINED_PATH)
+        # Running predictions
+        tokenized, _, _ = st.tokenize_sentences([text])
+        # Get sentence probability
+        prob = model(tokenized)[0]
 
-    #     # Top emoji id
-    #     emoji_ids = top_elements(prob, 5)
-    #     emoji_id_list.extend(emoji_ids)
-    #     #print("Tweet " + str(i) + " Time:", str(time() - x1))
-    #     i = i + 1
-    #     # for i in range(5):
-    #     #     # only taking the most prob top 5 emojis for each sentence
-    #     #     emoji_id_list.append(emoji_ids[i])
+        # Top emoji id
+        emoji_ids = top_elements(prob, 5)
+        emoji_id_list.extend(emoji_ids)
+        #print("Tweet " + str(i) + " Time:", str(time() - x1))
+        i = i + 1
+        # for i in range(5):
+        #     # only taking the most prob top 5 emojis for each sentence
+        #     emoji_id_list.append(emoji_ids[i])
     y = time()
     # this will return the count of who many times a particular emoji(index) occured
     w = Counter(emoji_id_list)

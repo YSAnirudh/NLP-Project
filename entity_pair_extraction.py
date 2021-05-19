@@ -21,23 +21,27 @@ class KnowledgeGraph():
         self.entity_pairs_df = pd.DataFrame()
     
     def parallel_extract(self, textInd):
-        print("Splitting into sentences for Text No. " + str(textInd+1))
-        sentences = self.coref_resolution(self.texts[textInd][0])
-        print("Splitting into Sentences Done.")
-        print("Extracting Entities for Text No. " + str(textInd+1))
+        print("Text No. " + str(textInd+1))
+        print(len(self.texts[textInd]))
+        #print("Splitting into sentences for Text No. " + str(textInd+1))
+        # print(type(self.texts[textInd][0]))
+        # print(self.texts[textInd])
+        sentences = self.coref_resolution(self.texts[textInd])
+        #print("Splitting into Sentences Done.")
+        #print("Extracting Entities for Text No. " + str(textInd+1))
         return self.get_entity_pairs(sentences=sentences)
 
     def build_knowledge_graph(self):
         if (not self.parallel):
             text_data_frames = [None for i in range(len(self.texts))]
-            for textInd in range(len(self.texts)):
+            for textInd in tqdm(range(len(self.texts))):
                 sentences = []
                 # f = open("sentences.txt", 'r')
                 # sentences = f.read().split("\n")
-                print("Splitting into sentences for Text No. " + str(textInd+1))
-                sentences = self.coref_resolution(self.texts[textInd][0])
-                print("Splitting into Sentences Done.")
-                print("Extracting Entities for Text No. " + str(textInd+1))
+                # print("Splitting into sentences for Text No. " + str(textInd+1))
+                sentences = self.coref_resolution(self.texts[textInd])
+                # print("Splitting into Sentences Done.")
+                # print("Extracting Entities for Text No. " + str(textInd+1))
                 text_data_frames[textInd] = self.get_entity_pairs(sentences=sentences)
             self.entity_pairs_df = pd.concat(text_data_frames)
         else:
@@ -51,7 +55,6 @@ class KnowledgeGraph():
             with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
                 for (i, data_frame) in tqdm(zip(intervals, executor.map(self.parallel_extract, intervals))):
                     text_data_frames[i] = data_frame
-            print("heleoelefniaekufbaekjff")
             self.entity_pairs_df = pd.concat(text_data_frames)
 
     def add_text(self, text):
@@ -63,16 +66,16 @@ class KnowledgeGraph():
 
 
     def coref_resolution(self, text):
-        print("\tSplitting into Sentences tagged by SpaCy...")
+        # print("\tSplitting into Sentences tagged by SpaCy...")
         text = re.sub(r'\n+', '.', text)  # replace multiple newlines with period
         text = re.sub(r'\[\d+\]', ' ', text)  # remove reference numbers
         text = self.nlp(text)
         if (self.coref):
-            print("\tResolving Coreference...")
+            # print("\tResolving Coreference...")
             texty = text._.coref_resolved
             text = self.nlp(texty)
-        else:
-            print("\tNo Coreference Resolution...")
+        # else:
+            # print("\tNo Coreference Resolution...")
         sentences = [sent.string.strip() for sent in text.sents]
         return sentences
     
@@ -288,8 +291,8 @@ class KnowledgeGraph():
     def get_entity_pairs(self, sentences):
         non_refined_entity_pairs = self.entity_pair_extraction(sentences)
         refined_entity_pairs = []
-        print("\tRefining Entities: ")
-        for ent_ind in tqdm(range(len(non_refined_entity_pairs))):
+        # print("\tRefining Entities: ")
+        for ent_ind in range(len(non_refined_entity_pairs)):
             subject, subject_type = self.refine_entity(
                 non_refined_entity_pairs[ent_ind][0], 
                 non_refined_entity_pairs[ent_ind][6], 
@@ -315,8 +318,8 @@ class KnowledgeGraph():
     
     def entity_pair_extraction(self, sentences, index:int = -1):
         entity_token_pairs = []
-        print("\tGetting Raw Entities: ")
-        for sentInd in tqdm(range(len(sentences))):
+        # print("\tGetting Raw Entities: ")
+        for sentInd in range(len(sentences)):
             ind = sentInd
             if(index >= 0):
                 ind = index

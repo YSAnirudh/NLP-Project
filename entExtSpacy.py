@@ -2,8 +2,6 @@ import pandas as pd
 import wiki_scrape
 from time import time
 from tqdm import tqdm
-import entity_pair_ext
-import coref_train
 from py2neo import Graph, Node, Relationship
 from entity_pair_extraction import KnowledgeGraph
 from wiki_scrape import WikiScrape
@@ -48,19 +46,33 @@ from wiki_scrape import WikiScrape
 # sentences = f.read().split("\n")
 #print(sentences)
 if __name__ == '__main__':
-    # text = pd.read_csv('wiki_text.csv').to_numpy().tolist()
-    # print(len(text))
-    # timeS = time()
-    # knowledge_graph = KnowledgeGraph(parallel=True)
-    # for i in range(len(text)):
-    #     knowledge_graph.add_text(text[i])
-    # knowledge_graph.build_knowledge_graph()
-    # print(knowledge_graph.entity_pairs_df)
-    # knowledge_graph.entity_pairs_df.to_csv("knowledge_graph.csv", index = False)
-    # timeE = time()
-    # print("Time:", timeE - timeS)
-    wiki_scraper = WikiScrape("https://en.wikipedia.org/wiki/Cristiano_Ronaldo", index = True, parallel=True)
-    wiki_scraper.scrape_all_pages()
+    text_df = pd.read_csv('wiki_text.csv')
+    text = text_df['Wiki'].to_numpy().tolist()
+    print(len(text))
+    # print(type(text[0]))
+    # print(text)
+    # print(text[0])
+    timeS = time()
+    # print(text[2][1][0])
+    # print(text[0])
+    knowledge_graph = KnowledgeGraph(parallel=True)
+    for i in range(len(text)):
+        knowledge_graph.add_text(text[i])
+    knowledge_graph.build_knowledge_graph()
+    print(knowledge_graph.entity_pairs_df)
+    knowledge_graph.entity_pairs_df.to_csv("knowledge_graph.csv", index = False)
+    timeE = time()
+    print("Time:", timeE - timeS)
 
+
+
+    # wiki_scraper = WikiScrape("https://en.wikipedia.org/wiki/Elon_Musk", index = True, parallel=True)
+    # wiki_scraper.add_url("https://en.wikipedia.org/wiki/Miss_Universe", index=True)
+    # wiki_scraper.add_url("https://en.wikipedia.org/wiki/Academy_Awards", index=True)
+    # wiki_scraper.add_url("https://en.wikipedia.org/wiki/Karim_Benzema", index=True)
+    # wiki_scraper.add_url("https://en.wikipedia.org/wiki/Gaza%E2%80%93Israel_conflict", index=True)
+    # wiki_scraper.scrape_all_pages()
+    # tweets_df2 = pd.DataFrame(wiki_scraper.wiki_pages, columns=['Wiki'])
+    # tweets_df2.to_csv('wiki_text.csv',encoding="utf-8")
 
 # data_into_neo4j("stanopenie.csv")
