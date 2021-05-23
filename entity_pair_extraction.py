@@ -1,3 +1,4 @@
+import typing_extensions
 from matplotlib.pyplot import text
 import spacy
 import neuralcoref
@@ -7,7 +8,10 @@ from tqdm import tqdm
 import concurrent
 
 class KnowledgeGraph():
-    def __init__(self, text = "",coref:bool=True, lemmatize:bool = True, parallel:bool = False):
+    def __init__(self, text = "",coref:bool=True, lemmatize:bool = True, 
+        parallel:bool = False, min_sentences:int = 10, 
+        min_char_count:int = 1000, max_char_count:int = 40000, clean_result_csv:bool = False, 
+        result_csv:str = "knowledge_graph_main.csv", max_workers:int = 10):
         self.texts = []
         self.coref = coref
         self.sentences = []
@@ -17,19 +21,50 @@ class KnowledgeGraph():
         neuralcoref.add_to_pipe(self.nlp)
         if (text != ""):
             self.add_text(text)
-
+        self.min_sentences = min_sentences
+        self.min_char_count = min_char_count
+        self.max_char_count = max_char_count
+        self.max_workers = max_workers
         self.entity_pairs_df = pd.DataFrame()
+        self.result_csv = result_csv
+        if (clean_result_csv):
+            df1 = pd.DataFrame([], columns=['subject', 'relation', 'object', 'subject_type', 'object_type'])
+            df1.to_csv(self.result_csv,encoding="utf-8")
     
+    def write_results_to_csv(self, dataframe, textInd):
+        df1 = pd.DataFrame(dataframe, columns=['subject', 'relation', 'object', 'subject_type', 'object_type'])
+        df1.drop_duplicates(inplace=True)
+        df2 = pd.read_csv(self.result_csv)
+        df2.drop('Unnamed: 0', axis=1, inplace=True)
+        df1 = pd.concat([df2, df1])
+        df1.reset_index(drop=True, inplace=True)
+        print("Writing a dataframe for text:", textInd)
+        df1.to_csv(self.result_csv,encoding="utf-8")
+
     def parallel_extract(self, textInd):
-        print("Text No. " + str(textInd+1))
-        print(len(self.texts[textInd]))
-        #print("Splitting into sentences for Text No. " + str(textInd+1))
-        # print(type(self.texts[textInd][0]))
-        # print(self.texts[textInd])
-        sentences = self.coref_resolution(self.texts[textInd])
-        #print("Splitting into Sentences Done.")
-        #print("Extracting Entities for Text No. " + str(textInd+1))
-        return self.get_entity_pairs(sentences=sentences)
+        if (not self.texts[textInd][1]):
+            if (len(self.texts[textInd][0]) < self.min_char_count or len(self.texts[textInd][0]) > self.max_char_count):
+                return pd.DataFrame([],columns=['subject', 'relation', 'object', 'subject_type', 'object_type'])
+        print("Text No. " + str(textInd+1) + ", Text Len:" + str(len(self.texts[textInd][0])))
+        # print("Text" + str(textInd+1) + " char", len(self.texts[textInd]))
+        sentences = []
+        try:
+            #print("Splitting into sentences for Text No. " + str(textInd+1))
+            # print(type(self.texts[textInd][0]))
+            # print(self.texts[textInd])
+            sentences = self.coref_resolution(self.texts[textInd][0], self.texts[textInd][1])
+            #print("Splitting into Sentences Done.")
+            #print("Extracting Entities for Text No. " + str(textInd+1))
+        except Exception as e:
+            print(e)
+            pass
+        df = self.get_entity_pairs(sentences=sentences)
+        # try:
+        #     # print(df)
+        #     self.write_results_to_csv(df, textInd+1)
+        # except Exception as e:
+        #     print(e)
+        return df
 
     def build_knowledge_graph(self):
         if (not self.parallel):
@@ -39,22 +74,25 @@ class KnowledgeGraph():
                 # f = open("sentences.txt", 'r')
                 # sentences = f.read().split("\n")
                 # print("Splitting into sentences for Text No. " + str(textInd+1))
-                sentences = self.coref_resolution(self.texts[textInd])
+                sentences = self.coref_resolution(self.texts[textInd][0], self.texts[textInd][1])
                 # print("Splitting into Sentences Done.")
                 # print("Extracting Entities for Text No. " + str(textInd+1))
                 text_data_frames[textInd] = self.get_entity_pairs(sentences=sentences)
+                # self.write_results_to_csv(text_data_frames[textInd])
             self.entity_pairs_df = pd.concat(text_data_frames)
         else:
-            text_data_frames = [None for i in range(len(self.texts))]
+            text_data_frames = [pd.DataFrame() for i in range(len(self.texts))]
             intervals = []
             # print(len(self.texts))
             for i in range(len(self.texts)):
-                intervals.append(i)
+                if (i < 1604 and i > 789):
+                    intervals.append(i)
 
             # print(intervals)
-            with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=self.max_workers) as executor:
                 for (i, data_frame) in tqdm(zip(intervals, executor.map(self.parallel_extract, intervals))):
                     text_data_frames[i] = data_frame
+            
             self.entity_pairs_df = pd.concat(text_data_frames)
 
     def add_text(self, text):
@@ -65,11 +103,15 @@ class KnowledgeGraph():
         print("You have " + str(len(self.texts)) + " Texts")
 
 
-    def coref_resolution(self, text):
+    def coref_resolution(self, text, bollean):
         # print("\tSplitting into Sentences tagged by SpaCy...")
         text = re.sub(r'\n+', '.', text)  # replace multiple newlines with period
         text = re.sub(r'\[\d+\]', ' ', text)  # remove reference numbers
         text = self.nlp(text)
+        if (not bollean):
+            if (len([sent.string.strip() for sent in text.sents]) < self.min_sentences):
+                return []
+        x = len([sent.string.strip() for sent in text.sents])
         if (self.coref):
             # print("\tResolving Coreference...")
             texty = text._.coref_resolved
@@ -77,6 +119,9 @@ class KnowledgeGraph():
         # else:
             # print("\tNo Coreference Resolution...")
         sentences = [sent.string.strip() for sent in text.sents]
+        # if(x == len(sentences)):
+        #     print("Sentence: ", len(sentences))
+            
         return sentences
     
     def entity_extraction_by_ROOT(self, sent):

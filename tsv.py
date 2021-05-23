@@ -1,8 +1,14 @@
 import pandas as pd
 import random
-
-a = pd.read_csv('knowledge_graph.csv').to_numpy().tolist()
-
+import re
+a = pd.read_csv('knowledge_graph.csv')
+a.drop('Unnamed: 0', axis = 1, inplace = True)
+a = a.to_numpy().tolist()
+for i in range(len(a)):
+    a[i][0] = re.sub(r'\\', '', a[i][0])
+    a[i][1] = re.sub(r'\\', '', a[i][1])
+    a[i][2] = re.sub(r'\\', '', a[i][2])
+# print(a)
 train = []
 test = []
 valid = []
@@ -33,7 +39,7 @@ print("Valid:", len(valid))
 # for i in range(len(valid)):
 #     print(valid[i])
 
-pd.DataFrame(train).to_csv('hello/hello-train.txt', sep='\t', header=False, index=False, index_label=None)
-pd.DataFrame(test).to_csv('hello/hello-test.txt', sep='\t', header=False, index=False, index_label=None)
-pd.DataFrame(valid).to_csv('hello/hello-valid.txt', sep='\t', header=False, index=False, index_label=None)
+pd.DataFrame(train).to_csv('mainkg/mainkg-train.txt', sep='\t', header=False, index=False, index_label=None)
+pd.DataFrame(test).to_csv('mainkg/mainkg-test.txt', sep='\t', header=False, index=False, index_label=None)
+pd.DataFrame(valid).to_csv('mainkg/mainkg-valid.txt', sep='\t', header=False, index=False, index_label=None)
 

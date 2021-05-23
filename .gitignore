@@ -1,0 +1,7 @@
+.vscode/
+__pycache__/
+*.pyc
+*.tsv
+*.txt
+hello/
+mainkg/

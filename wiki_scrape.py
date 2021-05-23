@@ -25,10 +25,15 @@ class WikiScrape():
         for i in range(len(self.urls)):
             scraped = []
             if (not self.parallel):
-                scraped = self.scrape_wiki_pages(self.urls[i][0], self.urls[i][1], self.urls[i][2])
+                scraped, leng = self.scrape_wiki_pages(self.urls[i][0], self.urls[i][1], self.urls[i][2])
             else:
-                scraped = self.parallel_scrape_wiki_pages(self.urls[i][0], self.urls[i][1], self.urls[i][2])
-            texts = texts + scraped[0]
+                scraped, leng = self.parallel_scrape_wiki_pages(self.urls[i][0], self.urls[i][1], self.urls[i][2])
+            for i in range(len(scraped)):
+                texts.append(scraped[i])
+                # print(len(scraped[i]))
+                if (scraped[i][1]):
+                    print("The Main Page:", scraped[i][0])
+                
         print(len(texts))
         self.wiki_pages = texts
     
@@ -65,7 +70,7 @@ class WikiScrape():
         text = ""
         for para in soup.find(id="bodyContent").find_all("p"):
             text += para.text
-        page_text.append(text)
+        page_text.append([text, True])
 
         allLinks = soup.find(id="bodyContent").find_all("a")
         if (index == True):
@@ -89,7 +94,7 @@ class WikiScrape():
             with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executor:
                 for page_data in tqdm(executor.map(self.parallel_scrape_helper, intervals)):
                     if (page_data[0] and page_data[1]):
-                        page_text.append(page_data[0])
+                        page_text.append([page_data[0], False])
         return page_text, len(page_text)
 
     def scrape_wiki_pages(self, url, index = False, max_pages = -1):
@@ -106,7 +111,7 @@ class WikiScrape():
         text = ""
         for para in soup.find(id="bodyContent").find_all("p"):
             text += para.text
-        page_text.append(text)
+        page_text.append([text, True])
 
         allLinks = soup.find(id="bodyContent").find_all("a")
         if (index == True):
@@ -121,12 +126,12 @@ class WikiScrape():
                 if allLinks[ind]['href'][0] != '/':
                     if (allLinks[ind]['href'] not in self.hrefs):
                         pg, length, _ = self.scrape_wiki_pages("" + allLinks[ind]['href'], index= False)
-                        page_text.append(pg[0])
+                        page_text.append([pg[0], False])
                         self.hrefs.add(allLinks[ind]['href'])
                         continue
                 if (href not in self.hrefs):
                     pg, length, _ = self.scrape_wiki_pages("https://en.wikipedia.org/" + allLinks[ind]['href'], index= False)
-                    page_text.append(pg[0])
+                    page_text.append([pg[0], False])
                     self.hrefs.add(allLinks[ind]['href'])
                     continue
         return page_text, len(page_text)
